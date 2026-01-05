@@ -4,9 +4,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import Icon from '@/components/ui/icon';
+import Cart from '@/components/Cart';
+import { useToast } from '@/hooks/use-toast';
+
+interface CartItem {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+}
 
 const Index = () => {
   const [selectedCategory, setSelectedCategory] = useState('Все');
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { toast } = useToast();
 
   const menuItems = [
     {
@@ -77,6 +89,46 @@ const Index = () => {
     ? menuItems
     : menuItems.filter(item => item.category === selectedCategory);
 
+  const addToCart = (item: typeof menuItems[0]) => {
+    setCartItems(prev => {
+      const existingItem = prev.find(cartItem => cartItem.id === item.id);
+      if (existingItem) {
+        return prev.map(cartItem =>
+          cartItem.id === item.id
+            ? { ...cartItem, quantity: cartItem.quantity + 1 }
+            : cartItem
+        );
+      }
+      return [...prev, { ...item, quantity: 1 }];
+    });
+    toast({
+      title: 'Добавлено в корзину',
+      description: `${item.name} добавлен в ваш заказ`,
+    });
+  };
+
+  const removeFromCart = (id: number) => {
+    setCartItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const updateQuantity = (id: number, quantity: number) => {
+    if (quantity === 0) {
+      removeFromCart(id);
+    } else {
+      setCartItems(prev =>
+        prev.map(item => (item.id === id ? { ...item, quantity } : item))
+      );
+    }
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
+    toast({
+      title: 'Корзина очищена',
+      description: 'Все товары удалены из корзины',
+    });
+  };
+
   return (
     <div className="min-h-screen">
       <header className="fixed top-0 w-full bg-white/95 backdrop-blur-sm shadow-md z-50">
@@ -90,10 +142,12 @@ const Index = () => {
             <a href="#delivery" className="font-medium hover:text-primary transition-colors">Доставка</a>
             <a href="#contacts" className="font-medium hover:text-primary transition-colors">Контакты</a>
           </div>
-          <Button className="bg-secondary hover:bg-secondary/90">
-            <Icon name="Phone" className="mr-2" size={18} />
-            Заказать
-          </Button>
+          <Cart
+            items={cartItems}
+            onRemove={removeFromCart}
+            onUpdateQuantity={updateQuantity}
+            onClear={clearCart}
+          />
         </nav>
       </header>
 
@@ -152,7 +206,10 @@ const Index = () => {
                 </CardHeader>
                 <CardContent className="flex justify-between items-center">
                   <span className="text-3xl font-bold text-primary">{item.price} ₽</span>
-                  <Button className="bg-secondary hover:bg-secondary/90">
+                  <Button
+                    className="bg-secondary hover:bg-secondary/90"
+                    onClick={() => addToCart(item)}
+                  >
                     <Icon name="Plus" size={20} className="mr-1" />
                     В корзину
                   </Button>
